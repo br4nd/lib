@@ -7,7 +7,7 @@ def parse_msg(msg_in) :
 
     msglist = msg_in.split(",")
 
-    if len(msg_in) < 3 :
+    if len(msg_in) < 3 or msglist[0][0] == '#' :
         return []
 
     if 'Timestamp' == msglist[0]: # jump over msg descriptions
@@ -81,33 +81,9 @@ def parse_msg(msg_in) :
                     ('MessageId',int(msglist[2])),
                     ('MillisecondTimestamp',int(msglist[3])),
                     ('MicrosecondTimestamp',int(msglist[4])),
+                    ('Text',' '.join(msglist[5:])),
                     ])
-
-        if ' KS2dM' == msglist[5] :
-            #KS2dM, range, predictedRange, previousState[0], previousState[1], previousState[2],
-            #previousState[3], anchorX, anchorY, anchorZ, timeDelta, m_localZHeight, reportedRangeErr,
-            #sigmaAccel, state[0], state[1], state[2], state[3], covariance(0, 0), covariance(1, 1),
-            #covariance(2, 2), covariance(3, 3), K[0], K[1], K[2], K[3]
-            msg['dbgMsgType'] = 'KS2dM'
-            therest = dict([('range',float(msglist[6])),
-                    ('predictedRange',float(msglist[7])),
-                    ('previousState',[float(msglist[8]),float(msglist[9]),float(msglist[10]), float(msglist[11])]),
-                    ('anchorLoc',[ float(msglist[12]), float(msglist[13]), float(msglist[14]) ]),
-                    ('timeDelta',float(msglist[15])),
-                    ('m_localZHeight',float(msglist[16])),
-                    ('reportedRangeErr',float(msglist[17])),
-                    ('sigmaAccel',float(msglist[18])),
-                    ('state',[float(msglist[19]),float(msglist[21]),float(msglist[22]),float(msglist[23])]),
-                    ('covariance00',float(msglist[23])),
-                    ('covariance11',float(msglist[24])),
-                    ('covariance22',float(msglist[25])),
-                    ('covariance33',float(msglist[26])),
-                    ('K',[float(msglist[27]),float(msglist[28]),float(msglist[20]),float(msglist[30])]),
-                    ])
-            msg.update(therest)
-        else :
-            msg['dbgMsgType'] = 'MiscText'
-            msg['Text'] = ''.join(msglist[5:])
+        #pdb.set_trace()
 
         return msg
 
