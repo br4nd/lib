@@ -8,6 +8,7 @@ returns all data in dictionary D
 import pdb
 import os, sys
 import numpy as np
+import numpy.lib.recfunctions
 import pprint as pp
 from parse_msg import parse_msg
 
@@ -25,7 +26,8 @@ def read_log(ffn_in) :
         D['NodeIDs'] = []
         for line in f:
             iline += 1
-            print '%d: %s' % (iline,line[0:99].strip('\n'))
+            if not iline % 500 : # print a line once in a while
+                print '%d: %s' % (iline,line[0:99].strip('\n'))
 
             msg = parse_msg(line)
             if not msg : # msg is empty
@@ -61,11 +63,12 @@ def read_log(ffn_in) :
                 if msg['ResponderID'] not in D['NodeIDs'] :
                     D['NodeIDs'].append(msg['ResponderID'])
 
-                rangeArray = process_rcm_msg(msg)
-                if not 'RcmRanges' in D :
-                    D['RcmRanges'] = rangeArray
+                rangeArray = process_echoed_range_info(msg)
+
+                if not 'RcmEchoedRanges' in D :
+                    D['RcmEchoedRanges'] = rangeArray
                 else :
-                    D['RcmRanges'] = np.vstack((D['RcmRanges'],rangeArray))
+                    D['RcmEchoedRanges'] = np.vstack((D['RcmEchoedRanges'],rangeArray))
 
             elif 'RcmScanInfo' == msg['msgType'] :
                 print 'SKIPPED RcmScanInfo'
@@ -91,31 +94,88 @@ def read_log(ffn_in) :
     return D
 
 def process_rcm_msg(msg) :
+    #pdb.set_trace()
+    msgType = msg['msgType']
+    msgID = msg['MessageID']
     reqID = msg['RequesterID']
     rspID = msg['ResponderID']
     t_host = msg['Timestamp']
     t_embedded = msg['EmbeddedTimestamp']
     vpeak = msg['Vpeak']
     noise = msg['Noise']
-#    pdb.set_trace()
     ledflags = msg['ReqLEDFlags'] | msg['RespLEDFlags']
     t_stopwatch = msg['StopwatchTime']
     status = msg['RangeStatus']
     ree = msg['PrecisionRangeErrEst']
     rmeas = msg['PrecisionRange']
-    rangeArray = np.array([(reqID,rspID,t_host,t_embedded,vpeak,noise,ledflags,t_stopwatch,status,ree,rmeas)],
-                    dtype= [('reqID','i4'),
+    reqAntMode = msg['ReqAntennaMode']
+    rspAntMode = msg['RespAntennaMode']
+
+    # Support new reqSNR which is labeled 'Reserved'
+    if 'Reserved' in msg.keys() :
+        reqSNR = msg['Reserved']
+        rangeArray = np.array([(msgType,msgID,reqID,rspID,t_host,t_embedded,vpeak,
+            noise,ledflags,t_stopwatch,status,ree,rmeas,reqAntMode,rspAntMode,reqSNR)],
+            dtype= [('msgType','S20'),
+                    ('msgID','i4'),
+                    ('reqID','i4'),
+                    ('rspID','i4'),
+                    ('t_host','<f8'),
+                    ('t_embedded','<f8'),
+                    ('vpeak','<f4'),
+                    ('noise','<f4'),
+                    ('ledflags','i4'),
+                    ('t_stopwatch','i4'),
+                    ('status','i4'),
+                    ('ree','<f4'),
+                    ('rmeas','<f4'),
+                    ('reqAntMode','i4'),
+                    ('rspAntMode','i4'),
+                    ('reqSNR','i4'),
+                ])
+
+    else :  # old - easier than adding a new element to a structured array
+        rangeArray = np.array([(msgType,msgID,reqID,rspID,t_host,t_embedded,vpeak,
+            noise,ledflags,t_stopwatch,status,ree,rmeas,reqAntMode,rspAntMode)],
+            dtype= [('msgType','S20'),
+                    ('msgID','i4'),
+                    ('reqID','i4'),
+                    ('rspID','i4'),
+                    ('t_host','<f8'),
+                    ('t_embedded','<f8'),
+                    ('vpeak','<f4'),
+                    ('noise','<f4'),
+                    ('ledflags','i4'),
+                    ('t_stopwatch','i4'),
+                    ('status','i4'),
+                    ('ree','<f4'),
+                    ('rmeas','<f4'),
+                    ('reqAntMode','i4'),
+                    ('rspAntMode','i4'),
+                ])
+
+    return rangeArray
+
+def process_echoed_range_info(msg) :
+    msgType = msg['msgType']
+    msgID = msg['MessageID']
+    reqID = msg['RequesterID']
+    rspID = msg['ResponderID']
+    t_host = msg['Timestamp']
+    t_embedded = msg['EmbeddedTimestamp']
+    ledflags = msg['LEDFlags']
+    ree = msg['PrecisionRangeErrEst']
+    rmeas = msg['PrecisionRange']
+    rangeArray = np.array([(msgType,msgID,reqID,rspID,t_host,t_embedded,
+        ledflags,ree,rmeas)],
+                    dtype= [('msgType','S20'),
+                            ('msgID','i4'),
+                            ('reqID','i4'),
                             ('rspID','i4'),
                             ('t_host','<f8'),
                             ('t_embedded','<f8'),
-                            ('vpeak','<f4'),
-                            ('noise','<f4'),
                             ('ledflags','i4'),
-                            ('t_stopwatch','i4'),
-                            ('status','i4'),
                             ('ree','<f4'),
                             ('rmeas','<f4'),
                         ])
-    # if status == 0 :
-    #     pdb.set_trace()
     return rangeArray

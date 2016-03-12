@@ -5,6 +5,8 @@ import numpy as np
 
 def parse_msg(msg_in) :
 
+    log_version = 0
+    #print msg_in
     msglist = msg_in.split(",")
 
     if len(msg_in) < 3 or msglist[0][0] == '#' :
@@ -113,7 +115,10 @@ def parse_msg(msg_in) :
                     ('Vpeak',float(msglist[20])/1000.0),
                     ('CoarseTOFInBins',int(msglist[21])),
                     ('EmbeddedTimestamp',float(msglist[21])/1000.0),
+                    #('Reserved',int(msglist[23])),
                     ])
+        if len(msglist) >= 24 :
+            msg['Reserved'] = int(msglist[23])
         return msg
 
     elif ' RcmEchoedRangeInfo' == msglist[1] :
@@ -249,6 +254,14 @@ def parse_msg(msg_in) :
                     ('StatsNumRangeAttempts',int(msglist[14])),
                     ('StatsNumRangeSuccesses',int(msglist[15])),
                     ('Stats',int(msglist[16]))
+                    ])
+        return msg
+
+    elif ' RangeNetUI' == msglist[1] :
+        msg = dict([('msgType','RangeNetUI'),
+                    ('Timestamp',float(msglist[0])),
+                    ('Version',msglist[2]),
+                    ('MajorVersion',int(msglist[2][1])),
                     ])
         return msg
 
